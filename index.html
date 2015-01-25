@@ -22,13 +22,7 @@
     <script type="text/javascript" src="js/jquery-2.1.3.min.js"></script>
     <script type="text/javascript" src="js/bootstrap.min.js"></script>
 
-    // Application Code
     <script>
-        var model = [
-            { name:"Dispatcher Recieved", find: "security.logging.dispatcher.*.received" },
-            { name:"Indexer Received",    find: "security.logging.indexer.*.received" },
-        ];
-
         // Cubism Setup
         var context = cubism.context()
             .serverDelay(60 * 1000)
@@ -37,37 +31,65 @@
         var graphite = context.graphite("http://graphite.booking.com");
 
         var rubicsApp = angular.module("rubicsApp", []);
-        rubicsApp.controller("MetricsCtrl", function($scope) {
-            $scope.metrics = model;
-            $scope.path    = '(empty)'
-            $scope.fetched = [];
+        rubicsApp.controller("MetricsCtrl", ['$scope', function($scope) {
+            $scope.metrics = [];
 
             $scope.addMetric = function() {
-                $scope.metrics.push({name:$scope.metricName, find:$scope.metricFind});
+                var m_name = $scope.metricName;
+                var m_path = $scope.metricFind;
+
+                // Asynchronous Fetching of data from Graphite
+                graphite.find(m_path, function(error,results) {
+                    var fetched = [];
+                    $(results).each(function(i,txt) {
+                        fetched.push(txt);
+                    });
+                    $scope.metrics.push({name:m_name, find:m_path, metrics:fetched});
+                    $scope.$apply();
+                });
+
                 $scope.metricFind='';
                 $scope.metricName='';
             };
 
-            $scope.showDetails = function(m) {
-                $scope.path = m.find;
-                console.log("Entered");
-                if("fetched" in m) {
-                    console.log("cached");
-                    $scope.fetched = m.fetched;
-                }
-                else {
-                    console.log("fetching");
-                    graphite.find(m.find, function(error,results) {
-                        m.fetched = [];
-                        $(results).each(function(i,txt) {
-                            m.fetched.push(txt);
-                        });
-                        $scope.fetched = m.fetched;
-                        $scope.$digest();
-                    });
-                }
+        }]); // End MetricsCtrl
+        function addAxis() {
+            d3.select("#horizonCharts").selectAll(".axis")
+                .data(["top", "bottom"])
+            .enter().append("div").attr("class", "fluid-row")
+                .attr("class", function(d) { return d + " axis"; })
+                .each(function(d) { d3.select(this).call(context.axis().ticks(12).orient(d)); });
+
+            d3.select("#horzinCharts").append("div")
+                .attr("class", "rule")
+                .call(context.rule());
+
+            context.on("focus", function(i) {
+                d3.selectAll(".value").style("right", i == null ? null : context.size() - 1 - i + "px");
+            });
+        }
+        rubicsApp.directive('horizonChart', function() {
+            function link (scope,element,attr) {
+                var horizon = context.horizon();
+                var data = [];
+                $(scope.m.metrics).each(function(i,d) {
+                    console.log("fetching " + d);
+                    data.push(graphite.metric(d));
+                });
+                d3.select(element[0]).selectAll(".horizon1")
+                    .data(data)
+                .enter().insert("div", ".bottom")
+                    .attr("class", "horizon").call(horizon);
+                addAxis();
+            }
+            return {
+                link: link,
+                restrict: 'E',
+                scope: { m: '=' }
             }
         });
+
+
     </script>
 
 </head>
@@ -85,7 +107,13 @@
         </div>
         <div id="navbar" class="navbar-collapse collapse">
           <ul class="nav navbar-nav navbar-right">
-            <li><a href="#">Help</a></li>
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Metrics <span class="caret"></span></a>
+              <ul class="dropdown-menu" role="menu">
+                <li data-ng-repeat="m in metrics"><a href="#">{{m.name}}</a></li>
+              </ul>
+            </li>
+
           </ul>
           <form ng-submit="addMetric()" class="navbar-form navbar-right form-inline">
             <div class="form-group">
@@ -102,20 +130,8 @@
       </div>
     </nav>
 
-    <div class="container-fluid">
-      <div class="row">
-        <div class="col-sm-3 col-md-2 sidebar">
-          <ul class="nav nav-sidebar">
-            <li data-ng-repeat="m in metrics"><a href="#" ng-click="showDetails(m)">{{m.name}}</a></li>
-          </ul>
-        </div>
-        <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2">
-          <p>{{path}}</p>
-          <ul>
-            <li ng-repeat="metric in fetched">{{metric}}</li>
-          </ul>
-        </div>
-      </div>
+    <div id="horizonCharts">
+        <horizon-chart ng-repeat="m in metrics" m="m"></horizon-chart>
     </div>
 </body>
 </html>
