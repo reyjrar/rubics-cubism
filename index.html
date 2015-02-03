@@ -78,7 +78,7 @@
         }]); // End MetricsCtrl
         function addAxis() {
             d3.select("#horizonCharts").selectAll(".axis")
-                .data(["top", "bottom"])
+                .data(["bottom"])
             .enter().append("div").attr("class", "fluid-row")
                 .attr("class", function(d) { return d + " axis"; })
                 .each(function(d) { d3.select(this).call(context.axis().ticks(12).orient(d)); });
@@ -133,7 +133,7 @@
             <li class="dropdown">
               <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Metrics <span class="caret"></span></a>
               <ul class="dropdown-menu" role="menu">
-                <li data-ng-repeat="m in metrics">
+                <li data-ng-repeat="m in metrics" ng-style="{'background-color': m.color}">
                   <a href="#"><span class="glyphicon glyphicon-eye-open"></span> {{m.name}}</a>
                 </li>
               </ul>
