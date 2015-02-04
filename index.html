@@ -26,94 +26,7 @@
     <script type="text/javascript" src="js/bootstrap-colorpicker-module.js"></script>
         <link rel="stylesheet" href="css/colorpicker.css"/>
 
-    <script>
-        // Cubism Setup
-        var context = cubism.context()
-            .serverDelay(60 * 1000)
-            .step(60 * 1000)
-            .size(1440);
-        var graphite = context.graphite("http://graphite.booking.com");
-
-        // From: https://stackoverflow.com/a/13542669
-        function shadeColor(color, percent) {
-            var f=parseInt(color.slice(1),16),t=percent<0?0:255,p=percent<0?percent*-1:percent,R=f>>16,G=f>>8&0x00FF,B=f&0x0000FF;
-            return "#"+(0x1000000+(Math.round((t-R)*p)+R)*0x10000+(Math.round((t-G)*p)+G)*0x100+(Math.round((t-B)*p)+B)).toString(16).slice(1);
-        }
-        function generateShades(baseColor) {
-            var positive = [ baseColor ];
-            var negative = [ shadeColor(baseColor,-0.15) ];
-            var offset = 0.40;
-            for(var i=0;  i < 3; i++) {
-                positive.unshift(shadeColor(positive[0],offset));
-                negative.push(shadeColor(negative[negative.length - 1],offset));
-            }
-            return negative.concat(positive);
-        }
-
-        var rubicsApp = angular.module("rubicsApp", ['colorpicker.module']);
-        rubicsApp.controller("MetricsCtrl", ['$scope', function($scope) {
-            $scope.metrics = [];
-
-            $scope.addMetric = function() {
-                var m_name = $scope.metricName;
-                var m_path = $scope.metricFind;
-                var m_color = $scope.metricColor;
-
-                // Asynchronous Fetching of data from Graphite
-                graphite.find(m_path, function(error,results) {
-                    var fetched = [];
-                    $(results).each(function(i,txt) {
-                        fetched.push(txt);
-                    });
-                    $scope.metrics.push({name:m_name, find:m_path, metrics:fetched, color:m_color});
-                    $scope.$apply();
-                });
-
-                $scope.metricFind='';
-                $scope.metricName='';
-                $scope.metricColor='#0094ff';
-            };
-
-
-        }]); // End MetricsCtrl
-        function addAxis() {
-            d3.select("#horizonCharts").selectAll(".axis")
-                .data(["bottom"])
-            .enter().append("div").attr("class", "fluid-row")
-                .attr("class", function(d) { return d + " axis"; })
-                .each(function(d) { d3.select(this).call(context.axis().ticks(12).orient(d)); });
-
-            d3.select("#horzinCharts").append("div")
-                .attr("class", "rule")
-                .call(context.rule());
-
-            context.on("focus", function(i) {
-                d3.selectAll(".value").style("right", i == null ? null : context.size() - 1 - i + "px");
-            });
-        }
-        rubicsApp.directive('horizonChart', function() {
-            function link (scope,element,attr) {
-                var shades = generateShades(scope.m.color);
-                console.log(shades);
-                var horizon = context.horizon().colors(shades);
-                var data = [];
-                $(scope.m.metrics).each(function(i,d) {
-                    console.log("fetching " + d);
-                    data.push(graphite.metric(d));
-                });
-                d3.select(element[0]).selectAll(".horizon1")
-                    .data(data)
-                .enter().insert("div", ".bottom")
-                    .attr("class", "horizon").call(horizon);
-                addAxis();
-            }
-            return {
-                link: link,
-                restrict: 'E',
-                scope: { m: '=' }
-            }
-        });
-    </script>
+    <script type="text/javascript" src="js/app.js"></script>
 
 </head>
 <body ng-controller="MetricsCtrl">
@@ -134,7 +47,7 @@
               <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Metrics <span class="caret"></span></a>
               <ul class="dropdown-menu" role="menu">
                 <li data-ng-repeat="m in metrics" ng-style="{'background-color': m.color}">
-                  <a href="#"><span class="glyphicon glyphicon-eye-open"></span> {{m.name}}</a>
+                  <a ng-click="m.hide = !m.hide"><span class="glyphicon glyphicon-eye-{{m.hide ? 'close' : 'open'}}" ng-class=""></span> {{m.name}}</a>
                 </li>
               </ul>
             </li>
@@ -143,9 +56,7 @@
           <form ng-submit="addMetric()" class="navbar-form navbar-right form-inline">
             <div class="input-group">
                 <span class="input-group-btn">
-                <button type="button" colorpicker class="btn"
-                    colorpicker-position="bottom" ng-style="{'background-color': metricColor}"
-                    ng-init="metricColor = '#0094ff'" ng-model="metricColor">
+                <button type="button" colorpicker class="btn" colorpicker-position="bottom" ng-style="{'background-color': metricColor}" ng-model="metricColor">
                     <span class="glyphicon glyphicon-tint"></span>
                 </button>
                 </span>
@@ -162,8 +73,10 @@
       </div>
     </nav>
 
-    <div id="horizonCharts">
-      <horizon-chart ng-repeat="m in metrics" m="m"></horizon-chart>
+    <div id="charts">
+      <div id="horizonCharts">
+        <horizon-chart ng-repeat="m in metrics" m="m" ng-hide="m.hide"></horizon-chart>
+      </div>
     </div>
 </body>
 </html>
