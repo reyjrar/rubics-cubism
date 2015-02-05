@@ -49,6 +49,7 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'cubismService', function($scope,
       $(results).each(function(i,txt) {
         fetched.push(txt);
       });
+      fetched.sort();
       $scope.metrics.push({name:m_name, find:m_path, metrics:fetched, color:m_color, hide:false});
       $scope.$apply();
     });
@@ -103,18 +104,17 @@ rubicsApp.directive('horizonChart', ['cubismService', function(cubismService) {
     }
   }
 
-  function link (scope,element,attr) {
+  function link (scope, element, attr) {
     addAxis(cubismService.getContext());
     var data = [];
-    $(scope.m.metrics).each(function(i,d) {
+    $(scope.m.metrics).each(function(i, d) {
       console.log("fetching " + d);
       data.push(cubismService.getGraphite().metric(d));
     });
     var shades = generateShades(scope.m.color);
     console.log(shades);
     d3.select(element[0]).selectAll(".horizon")
-      .data(data)
-      .enter().insert("div", ".bottom")
+      .data(data).enter().append("div")
       .attr("class", "horizon").call(cubismService.getContext().horizon().colors(shades));
   }
 
