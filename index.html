@@ -73,10 +73,10 @@
       </div>
     </nav>
 
-    <div id="charts" ng-show="metrics.length">
+    <charts id="charts" ng-show="metrics.length">
       <div id="horizonCharts">
         <horizon-chart ng-repeat="m in metrics" m="m" ng-hide="m.hide"></horizon-chart>
       </div>
-    </div>
+    </charts>
 </body>
 </html>

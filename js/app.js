@@ -68,6 +68,38 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'cubismService', function($scope,
 
 }]); // End MetricsCtrl,
 
+rubicsApp.directive('charts', ['cubismService', function(cubismService) {
+
+  function addAxis(context, element) {
+    d3.select(element).selectAll(".bottom.axis")
+      .data(["bottom"]).enter().append("div").attr("class", "fluid-row")
+      .attr("class", function(d) { return d + " axis"; })
+      .each(function(d) { d3.select(this).call(context.axis().ticks(12).orient(d)); });
+
+    d3.select(element).selectAll(".top.axis")
+      .data(["top"]).enter().insert("div", ":first-child").attr("class", "fluid-row")
+      .attr("class", function(d) { return d + " axis"; })
+      .each(function(d) { d3.select(this).call(context.axis().ticks(12).orient(d)); });
+
+    d3.select(element).append("div").attr("class", "rule")
+      .call(context.rule());
+
+    context.on("focus", function(i) {
+      d3.select(element).selectAll(".value").style("right", i == null ? null : context.size() - 1 - i + "px");
+    });
+  }
+
+  function link (scope, element, attr) {
+    addAxis(cubismService.getContext(), element[0]);
+  }
+
+  return {
+    link: link,
+    restrict: 'E',
+    scope: {}
+  }
+}]);
+
 
 rubicsApp.directive('horizonChart', ['cubismService', function(cubismService) {
 // From: https://stackoverflow.com/a/13542669
@@ -87,29 +119,7 @@ rubicsApp.directive('horizonChart', ['cubismService', function(cubismService) {
     return negative.concat(positive);
   }
 
-  function addAxis(context) {
-    if (!$("#charts div.rule").length) {
-      d3.select("#charts").selectAll(".bottom.axis")
-        .data(["bottom"]).enter().append("div").attr("class", "fluid-row")
-        .attr("class", function(d) { return d + " axis"; })
-        .each(function(d) { d3.select(this).call(context.axis().ticks(12).orient(d)); });
-
-      d3.select("#charts").selectAll(".top.axis")
-        .data(["top"]).enter().insert("div", ":first-child").attr("class", "fluid-row")
-        .attr("class", function(d) { return d + " axis"; })
-        .each(function(d) { d3.select(this).call(context.axis().ticks(12).orient(d)); });
-
-      d3.select("#charts").append("div").attr("class", "rule")
-        .call(context.rule());
-
-      context.on("focus", function(i) {
-        d3.selectAll(".value").style("right", i == null ? null : context.size() - 1 - i + "px");
-      });
-    }
-  }
-
   function link (scope, element, attr) {
-    addAxis(cubismService.getContext());
     var data = [];
     $(scope.m.metrics).each(function(i, d) {
       console.log("fetching " + d);
