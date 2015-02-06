@@ -3,7 +3,7 @@ var rubicsApp = angular.module("rubicsApp", [
 ]);
 
 
-rubicsApp.factory('cubismService', function() {
+rubicsApp.factory('cubismService', ['$q', function($q) {
   // TODO make the service into a provider and make the URL configurable
   var context = cubism.context()
     .serverDelay(60 * 1000)
@@ -14,9 +14,24 @@ rubicsApp.factory('cubismService', function() {
 
   return {
     getContext: function() { return context; },
-    getGraphite: function() { return graphite; }
+
+    getGraphite: function() { return graphite; },
+
+    find: function(path) {
+      var deferred = $q.defer();
+      graphite.find(path, function(error, results) {
+        if (results && results.length > 0) {
+          results.sort();
+        } else {
+          results = [];
+        }
+        deferred.resolve(results);
+      });
+
+       return deferred.promise;
+    }
   };
-});
+}]);
 
 
 rubicsApp.controller("MetricsCtrl", ['$scope', 'cubismService', function($scope, cubismService) {
@@ -43,15 +58,8 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'cubismService', function($scope,
     var m_name = $scope.metricName || m_path;
     var m_color = $scope.metricColor;
 
-    // Asynchronous Fetching of data from Graphite
-    cubismService.getGraphite().find(m_path, function(error,results) {
-      var fetched = [];
-      $(results).each(function(i,txt) {
-        fetched.push(txt);
-      });
-      fetched.sort();
+    cubismService.find(m_path).then(function (fetched) {
       $scope.metrics.push({name:m_name, find:m_path, metrics:fetched, color:m_color, hide:false});
-      $scope.$apply();
     });
 
     //$scope.metricFind = ''; //TODO Commented for testing
