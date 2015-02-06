@@ -20,15 +20,9 @@ rubicsApp.factory('cubismService', ['$q', function($q) {
     find: function(path) {
       var deferred = $q.defer();
       graphite.find(path, function(error, results) {
-        if (results && results.length > 0) {
-          results.sort();
-        } else {
-          results = [];
-        }
-        deferred.resolve(results);
+        deferred.resolve(results && results.length > 0 ? results.sort() : []);
       });
-
-       return deferred.promise;
+      return deferred.promise;
     }
   };
 }]);
@@ -59,7 +53,9 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'cubismService', function($scope,
     var m_color = $scope.metricColor;
 
     cubismService.find(m_path).then(function (fetched) {
-      $scope.metrics.push({name:m_name, find:m_path, metrics:fetched, color:m_color, hide:false});
+      if (fetched.length > 0) {
+        $scope.metrics.push({name:m_name, find:m_path, metrics:fetched, color:m_color, hide:false});
+      }
     });
 
     //$scope.metricFind = ''; //TODO Commented for testing
