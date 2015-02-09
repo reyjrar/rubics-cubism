@@ -18,10 +18,16 @@ rubicsApp.factory('cubismService', ['$q', function($q) {
     getGraphite: function() { return graphite; },
 
     find: function(path) {
-      console.log("Finding: " + path);
+      console.info("Finding metric for: " + path);
       var deferred = $q.defer();
       graphite.find(path, function(error, results) {
-        deferred.resolve(results && results.length > 0 ? results.sort() : []);
+        if (error) {
+          console.error("Finding metric returned error: " + error);
+          deferred.reject(error);
+        } else {
+          console.info("Found: " + results);
+          deferred.resolve(results && results.length > 0 ? results.sort() : []);
+        }
       });
       return deferred.promise;
     }
@@ -70,6 +76,8 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'cubismService', function($scope,
         if (fetched.length > 0) {
           $scope.metricGroups.push({name:m_name, find:m_path, metrics:fetched, color:m_color, hide:false});
         }
+      }, function () {
+        console.error("There was an error finding metric path " + m_path);
       });
     }
 
@@ -91,13 +99,21 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'cubismService', function($scope,
   };
 
   $scope.updateVars = function() {
+
+    angular.forEach($scope.vars, function(v) {
+      $scope.uniqueVars[v.name] = v.value || "";
+    });
+
     angular.forEach($scope.metricGroups, function(m) {
       var vars = m.find.match(/(\$[A-Za-z0-9_]*)/g);
       if (vars && vars.length > 0) {
         console.log("Updating vars in " + m.find);
         var m_path = m.find;
-        angular.forEach($scope.vars, function(v) {
-          m_path = m_path.replace(v.name, v.value);
+        // Sort so that we replace the largest variable first. This prevents a smaller variable name contained in a larger variable name
+        vars.sort(function(a, b) { return b.length - a.length; });
+        console.log(vars);
+        angular.forEach(vars, function(v) {
+          m_path = m_path.replace(v, $scope.uniqueVars[v]);
         });
         console.log("to " + m_path);
         cubismService.find(m_path).then(function (fetched) {
@@ -169,18 +185,13 @@ rubicsApp.directive('horizonChart', ['cubismService', function(cubismService) {
     scope.shades = generateShades(scope.m.color);
     console.log(scope.shades);
     scope.$watch('m.metrics', function(metrics) {
-      console.log('Watch ' + metrics);
-      var data = [];
-      angular.forEach(metrics, function(d) {
-        console.log("fetching: " + d);
-        data.push(cubismService.getGraphite().metric(d));
-      });
-      var selection = d3.select(element[0]).selectAll(".horizon").data(data);
-      console.log('enter');
-      selection.enter().append("div").attr("class", "horizon").call(cubismService.getContext().horizon().colors(scope.shades));
-      console.log('exit');
+      console.log('Saw metric change: ' + metrics);
+      var selection = d3.select(element[0]).selectAll(".horizon").data(metrics, function(d) {return d;});
+      //console.log('enter');
+      selection.enter().append("div").attr("class", "horizon").call(cubismService.getContext().horizon().colors(scope.shades).metric(function(d) {return cubismService.getGraphite().metric(d);}));
+      //console.log('exit');
       selection.exit().call(cubismService.getContext().horizon().remove).remove();
-      console.log('done');
+      //console.log('done');
     });
   }
 
