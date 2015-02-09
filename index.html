@@ -42,6 +42,26 @@
           <a class="navbar-brand" href="#">Rubics Cubism</a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">{{dashboardName}} <span class="caret"></span></a>
+              <ul class="dropdown-menu" role="menu">
+                <li data-ng-repeat="d in dashboards">
+                  <a ng-click="loadDashboard(d)"><span class="glyphicon glyphicon-signal"></span> {{d}}</a>
+                </li>
+                <li>
+                  <form ng-submit="" class="form-inline">
+                    <div class="input-group">
+                      <input type="text" ng-model="dashboardNewName" class="form-control" placeholder="{{dashboardName}}"/>
+                      <span class="input-group-btn">
+                        <button class="btn btn-default" ng-click="saveDashboard()">Save</button>
+                      </span>
+                    </div>
+                  </form>
+                </li>
+              </ul>
+            </li>
+          </ul>
           <ul class="nav navbar-nav navbar-right">
             <li class="dropdown">
               <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Metrics <span class="caret"></span></a>

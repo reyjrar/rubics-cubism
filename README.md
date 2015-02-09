@@ -12,15 +12,15 @@ to do all the modifications in the browser.
 # TODO #
 
 * Metrics
-  * Controller/View to allow exclusion of metrics
-  * Edit Metrics using Controller/View
-  * Allow "variables" in metric path, example:
+  * Done: Controller/View to allow exclusion of metrics
+  * Done: Edit Metrics using Controller/View
+  * Done: Allow "variables" in metric path, example:
     * sys.$HOST.loadavg.\*
     * Creates a HOST:[     ] input field in the interface.
     * Set "box-001.example.com" hit "Update" and metrics
       are refreshed on the page.
 * Dashboards
-  * Controller/View to allow saving dashboards by name
+  * Done: Controller/View to allow saving dashboards by name
   * Backends for Dashboard Storage?
 
 # Credits #

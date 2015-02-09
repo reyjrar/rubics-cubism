@@ -3,6 +3,39 @@ var rubicsApp = angular.module("rubicsApp", [
 ]);
 
 
+rubicsApp.factory('storageService', [function() {
+  var itemPrefix = 'rubicsApp.dashboard.';
+  return {
+    items: function() {
+      if (!window.localStorage) {
+        return [];
+      }
+      var keys = [];
+      for (var i=0; i < window.localStorage.length; i++) {
+        keys.push(window.localStorage.key(i));
+      }
+      return keys.filter(function(n) { return n.substr(0, itemPrefix.length) === itemPrefix; }).map(function(n) { return n.substr(itemPrefix.length); });
+    },
+
+    load: function(name) {
+      var json = localStorage.getItem(itemPrefix + name);
+      if (json) {
+        return angular.fromJson(json);
+      }
+      return json;
+    },
+
+    save: function(name, value) {
+      if (!window.localStorage) {
+        return;
+      }
+      localStorage.setItem(itemPrefix + name, angular.toJson(value));
+    }
+
+  };
+}]);  //storageService
+
+
 rubicsApp.factory('cubismService', ['$q', function($q) {
   // TODO make the service into a provider and make the URL configurable
   var context = cubism.context()
@@ -32,10 +65,10 @@ rubicsApp.factory('cubismService', ['$q', function($q) {
       return deferred.promise;
     }
   };
-}]);
+}]);  //cubismService
 
 
-rubicsApp.controller("MetricsCtrl", ['$scope', 'cubismService', function($scope, cubismService) {
+rubicsApp.controller("MetricsCtrl", ['$scope', 'storageService', 'cubismService', function($scope, storageService, cubismService) {
 
   var metricColorIndex = 0;
   var metricColors = [
@@ -49,10 +82,15 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'cubismService', function($scope,
     '#fa00ff'
   ];
 
+  $scope.dashboards = storageService.items();
+  $scope.dashboardName = "My Shiny New Dashboard";
+  $scope.dashboardNewName = "My Shiny New Dashboard";
+
   $scope.editMetrics = false;
   $scope.metricFind = 'security.logging.indexer.*.total'; //TODO this is a default for testing
   $scope.metricName = '';
   $scope.metricColor = metricColors[metricColorIndex++];
+
   $scope.metricGroups = [];
   $scope.vars = [];
   $scope.uniqueVars = {};
@@ -123,7 +161,31 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'cubismService', function($scope,
     });
   };
 
+  $scope.saveDashboard = function() {
+    storageService.save(
+      $scope.dashboardNewName,
+      { metricGroups: $scope.metricGroups, vars: $scope.vars, metricColorIndex: metricColorIndex }
+    );
+    $scope.dashboardName = $scope.dashboardNewName;
+    $scope.dashboards = storageService.items();
+  };
+
+  $scope.loadDashboard = function(name) {
+    var data = storageService.load(name);
+    if (data) {
+      $scope.dashboardName = name;
+      $scope.metricGroups = data.metricGroups;
+      $scope.vars = data.vars;
+      angular.forEach($scope.vars, function(v) {
+        $scope.uniqueVars[v.name] = v.value || "";
+      });
+      metricColorIndex = data.metricColorIndex || 0;
+      $scope.metricColor = metricColors[metricColorIndex];
+    }
+  };
+
 }]); // End MetricsCtrl,
+
 
 rubicsApp.directive('charts', ['cubismService', function(cubismService) {
 
@@ -155,7 +217,7 @@ rubicsApp.directive('charts', ['cubismService', function(cubismService) {
     restrict: 'E',
     scope: {}
   }
-}]);
+}]);  // charts
 
 
 rubicsApp.directive('horizonChart', ['cubismService', function(cubismService) {
@@ -221,4 +283,4 @@ rubicsApp.directive('horizonChart', ['cubismService', function(cubismService) {
       hcEditMode: '='
     }
   }
-}]);
+}]);  // horizonChart
