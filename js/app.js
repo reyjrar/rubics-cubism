@@ -18,6 +18,7 @@ rubicsApp.factory('cubismService', ['$q', function($q) {
     getGraphite: function() { return graphite; },
 
     find: function(path) {
+      console.log("Finding: " + path);
       var deferred = $q.defer();
       graphite.find(path, function(error, results) {
         deferred.resolve(results && results.length > 0 ? results.sort() : []);
@@ -42,21 +43,35 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'cubismService', function($scope,
     '#fa00ff'
   ];
 
+  $scope.editMetrics = false;
   $scope.metricFind = 'security.logging.indexer.*.total'; //TODO this is a default for testing
   $scope.metricName = '';
   $scope.metricColor = metricColors[metricColorIndex++];
-  $scope.metrics = [];
+  $scope.metricGroups = [];
+  $scope.vars = [];
+  $scope.uniqueVars = {};
 
   $scope.addMetric = function() {
     var m_path = $scope.metricFind;
     var m_name = $scope.metricName || m_path;
     var m_color = $scope.metricColor;
 
-    cubismService.find(m_path).then(function (fetched) {
-      if (fetched.length > 0) {
-        $scope.metrics.push({name:m_name, find:m_path, metrics:fetched, color:m_color, hide:false});
+    var vars = m_path.match(/(\$[A-Za-z0-9_]*)/g);
+    if (vars) {
+      // Now ignore the already defined variables
+      vars = vars.filter(function(n) { return !$scope.uniqueVars[n]; });
+      if (vars.length > 0) {
+        $scope.vars = $scope.vars.concat(vars.map(function(n) { return { name: n, value: ''}}));
+        vars.forEach(function(n) { $scope.uniqueVars[n] = ""; });
       }
-    });
+      $scope.metricGroups.push({name:m_name, find:m_path, metrics:[], color:m_color, hide:false});
+    } else {
+      cubismService.find(m_path).then(function (fetched) {
+        if (fetched.length > 0) {
+          $scope.metricGroups.push({name:m_name, find:m_path, metrics:fetched, color:m_color, hide:false});
+        }
+      });
+    }
 
     //$scope.metricFind = ''; //TODO Commented for testing
     $scope.metricName = '';
@@ -64,6 +79,37 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'cubismService', function($scope,
     if (metricColorIndex >= metricColors.length) {
       metricColorIndex = 0;
     }
+  };
+
+  $scope.toggleEditMode = function() {
+    $scope.editMetrics = !$scope.editMetrics;
+    if ($scope.editMetrics) {
+      d3.selectAll(".horizon").each(function() {d3.select(this).append("span").attr("class", "horizon-remove glyphicon glyphicon-remove")});
+    } else {
+      d3.selectAll(".horizon .horizon-remove").remove();
+    }
+  };
+
+  $scope.updateVars = function() {
+    angular.forEach($scope.metricGroups, function(m) {
+      var vars = m.find.match(/(\$[A-Za-z0-9_]*)/g);
+      if (vars && vars.length > 0) {
+        console.log("Updating vars in " + m.find);
+        var m_path = m.find;
+        angular.forEach($scope.vars, function(v) {
+          m_path = m_path.replace(v.name, v.value);
+        });
+        console.log("to " + m_path);
+        cubismService.find(m_path).then(function (fetched) {
+          console.log("Update found: " + fetched);
+          if (fetched.length > 0) {
+            m.metrics = fetched;
+          } else {
+            m.metrics = [];
+          }
+        });
+      }
+    });
   };
 
 }]); // End MetricsCtrl,
@@ -120,16 +166,22 @@ rubicsApp.directive('horizonChart', ['cubismService', function(cubismService) {
   }
 
   function link (scope, element, attr) {
-    var data = [];
-    $(scope.m.metrics).each(function(i, d) {
-      console.log("fetching " + d);
-      data.push(cubismService.getGraphite().metric(d));
+    scope.shades = generateShades(scope.m.color);
+    console.log(scope.shades);
+    scope.$watch('m.metrics', function(metrics) {
+      console.log('Watch ' + metrics);
+      var data = [];
+      angular.forEach(metrics, function(d) {
+        console.log("fetching: " + d);
+        data.push(cubismService.getGraphite().metric(d));
+      });
+      var selection = d3.select(element[0]).selectAll(".horizon").data(data);
+      console.log('enter');
+      selection.enter().append("div").attr("class", "horizon").call(cubismService.getContext().horizon().colors(scope.shades));
+      console.log('exit');
+      selection.exit().call(cubismService.getContext().horizon().remove).remove();
+      console.log('done');
     });
-    var shades = generateShades(scope.m.color);
-    console.log(shades);
-    d3.select(element[0]).selectAll(".horizon")
-      .data(data).enter().append("div")
-      .attr("class", "horizon").call(cubismService.getContext().horizon().colors(shades));
   }
 
   return {

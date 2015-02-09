@@ -46,12 +46,11 @@
             <li class="dropdown">
               <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Metrics <span class="caret"></span></a>
               <ul class="dropdown-menu" role="menu">
-                <li data-ng-repeat="m in metrics" ng-style="{'background-color': m.color}">
-                  <a ng-click="m.hide = !m.hide"><span class="glyphicon glyphicon-eye-{{m.hide ? 'close' : 'open'}}" ng-class=""></span> {{m.name}}</a>
+                <li data-ng-repeat="m in metricGroups" ng-style="{'background-color': m.color}">
+                  <a ng-click="m.hide = !m.hide"><span class="glyphicon glyphicon-eye-{{m.hide ? 'close' : 'open'}}"></span> {{m.name}}</a>
                 </li>
               </ul>
             </li>
-
           </ul>
           <form ng-submit="addMetric()" class="navbar-form navbar-right form-inline">
             <div class="input-group">
@@ -68,14 +67,34 @@
                     <button class="btn btn-default">Add</button>
                 </span>
             </div>
-            </form>
+            <div class="input-group">
+              <a class="btn btn-default" ng-class="{disabled: !metricGroups.length, active: editMetrics}" ng-click="toggleEditMode()">
+                <span class="glyphicon glyphicon-pencil"></span>
+              </a>
+            </div>
+          </form>
         </div>
       </div>
     </nav>
-
-    <charts id="charts" ng-show="metrics.length">
+    <div class="well well-sm" ng-show="vars.length">
+      <form class="form-horizontal">
+        <div class="form-group" ng-repeat="v in vars">
+          <label class="col-sm-2 control-label">{{v.name}}</label>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" placeholder="Enter a value for your variable" ng-model="v.value">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="updateVars" class="col-sm-2 control-label"></label>
+          <div class="col-sm-10">
+            <button class="btn btn-default" id="updateVars" ng-click="updateVars()">Update</button>
+          </div>
+        </div>
+      </form>
+    </div>
+    <charts id="charts" ng-show="metricGroups.length">
       <div id="horizonCharts">
-        <horizon-chart ng-repeat="m in metrics" m="m" ng-hide="m.hide"></horizon-chart>
+        <horizon-chart ng-repeat="m in metricGroups" m="m" ng-hide="m.hide"></horizon-chart>
       </div>
     </charts>
 </body>
