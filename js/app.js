@@ -162,6 +162,9 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'storageService', 'cubismService'
   };
 
   $scope.saveDashboard = function() {
+    if (storageService.load($scope.dashboardNewName)) {
+      // TODO add prompt to overwrite
+    }
     storageService.save(
       $scope.dashboardNewName,
       { metricGroups: $scope.metricGroups, vars: $scope.vars, metricColorIndex: metricColorIndex }
@@ -171,6 +174,7 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'storageService', 'cubismService'
   };
 
   $scope.loadDashboard = function(name) {
+    //TODO add prompt to prevent destroying the current dashboard without saving first
     var data = storageService.load(name);
     if (data) {
       $scope.dashboardName = name;
