@@ -67,8 +67,12 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'cubismService', function($scope,
       // Now ignore the already defined variables
       vars = vars.filter(function(n) { return !$scope.uniqueVars[n]; });
       if (vars.length > 0) {
-        $scope.vars = $scope.vars.concat(vars.map(function(n) { return { name: n, value: ''}}));
         vars.forEach(function(n) { $scope.uniqueVars[n] = ""; });
+        $scope.vars = $scope.vars.concat(vars.map(function(n) { return { name: n, value: ''}; })).sort(function(a, b) {
+          if (a.name < b.name) return -1;
+          if (a.name > b.name) return 1;
+          return 0;
+        });
       }
       $scope.metricGroups.push({name:m_name, find:m_path, metrics:[], color:m_color, hide:false});
     } else {
@@ -86,15 +90,6 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'cubismService', function($scope,
     $scope.metricColor = metricColors[metricColorIndex++];
     if (metricColorIndex >= metricColors.length) {
       metricColorIndex = 0;
-    }
-  };
-
-  $scope.toggleEditMode = function() {
-    $scope.editMetrics = !$scope.editMetrics;
-    if ($scope.editMetrics) {
-      d3.selectAll(".horizon").each(function() {d3.select(this).append("span").attr("class", "horizon-remove glyphicon glyphicon-remove")});
-    } else {
-      d3.selectAll(".horizon .horizon-remove").remove();
     }
   };
 
@@ -182,10 +177,10 @@ rubicsApp.directive('horizonChart', ['cubismService', function(cubismService) {
   }
 
   function link (scope, element, attr) {
-    scope.shades = generateShades(scope.m.color);
+    scope.shades = generateShades(scope.hcMetrics.color);
     console.log(scope.shades);
-    scope.$watch('m.metrics', function(metrics) {
-      console.log('Saw metric change: ' + metrics);
+    scope.$watch('hcMetrics.metrics', function(metrics) {
+      console.log('Metric changed: ' + metrics);
       var selection = d3.select(element[0]).selectAll(".horizon").data(metrics, function(d) {return d;});
       //console.log('enter');
       selection.enter().append("div").attr("class", "horizon").call(cubismService.getContext().horizon().colors(scope.shades).metric(function(d) {return cubismService.getGraphite().metric(d);}));
@@ -193,13 +188,37 @@ rubicsApp.directive('horizonChart', ['cubismService', function(cubismService) {
       selection.exit().call(cubismService.getContext().horizon().remove).remove();
       //console.log('done');
     });
+
+    scope.$watch('hcEditMode', function(editMode) {
+      console.log("hcEditMode changed: " + editMode);
+      if (editMode) {
+        scope.removeList = {};
+        d3.select(element[0]).selectAll(".horizon").insert("div", ":first-child").attr("class", "horizon-remove pull-right").append("button").attr("class", "btn btn-sm btn-default").on("click.hcremove", function(d) {
+          scope.removeList[d] = scope.removeList[d] ? 0 : 1;
+          d3.select(this).classed({'active': scope.removeList[d], 'btn-default': !scope.removeList[d], 'btn-danger': scope.removeList[d] });
+          console.log("Remove " + d);
+        }).append("span").attr("class", "glyphicon glyphicon-remove");
+      } else if (scope.removeList) {
+        var selection = d3.select(element[0]).selectAll(".horizon .horizon-remove");
+        selection.select("button").on("click.hcremove", null);
+        selection.remove();
+        var newMetrics = scope.hcMetrics.metrics.filter(function (d) {
+          return !scope.removeList[d];
+        });
+        if (scope.hcMetrics.metrics.length !== newMetrics.length) {
+          scope.hcMetrics.metrics = newMetrics;
+          //console.log("New metrics: " + newMetrics);
+        }
+      }
+    });
   }
 
   return {
     link: link,
     restrict: 'E',
     scope: {
-      m: '='
+      hcMetrics: '=',
+      hcEditMode: '='
     }
   }
 }]);

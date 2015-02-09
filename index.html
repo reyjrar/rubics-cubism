@@ -68,7 +68,7 @@
                 </span>
             </div>
             <div class="input-group">
-              <a class="btn btn-default" ng-class="{disabled: !metricGroups.length, active: editMetrics}" ng-click="toggleEditMode()">
+              <a class="btn btn-default" ng-class="{disabled: !metricGroups.length, active: editMetrics}" ng-click="editMetrics = !editMetrics">
                 <span class="glyphicon glyphicon-pencil"></span>
               </a>
             </div>
@@ -94,7 +94,7 @@
     </div>
     <charts id="charts" ng-show="metricGroups.length">
       <div id="horizonCharts">
-        <horizon-chart ng-repeat="m in metricGroups" m="m" ng-hide="m.hide"></horizon-chart>
+        <horizon-chart ng-repeat="m in metricGroups" hc-metrics="m" hc-edit-mode="editMetrics" ng-hide="m.hide"></horizon-chart>
       </div>
     </charts>
 </body>

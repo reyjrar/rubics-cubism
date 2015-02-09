@@ -197,16 +197,6 @@ header {
   right: 0;
 }
 
-.horizon .horizon-remove {
-  bottom: 0;
-  left: 0px;
-  line-height: 30px;
-  margin: 0 6px;
-  position: absolute;
-  text-shadow: 0 1px 0 rgba(255,255,255,.5);
-  white-space: nowrap;
-}
-
 .line {
   background: #000;
   opacity: .2;
