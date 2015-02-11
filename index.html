@@ -86,7 +86,7 @@
                     <span class="glyphicon glyphicon-tint"></span>
                 </button>
                 </span>
-                <input type="text" ng-model="metricName" class="form-control" placeholder="Name of Metric"/>
+                <input type="text" ng-model="metricName" class="form-control" placeholder="Title for metric group"/>
             </div>
             <div class="input-group">
                 <input type="text" ng-model="metricFind" class="form-control" placeholder="path.to.metric.*"/>
@@ -124,5 +124,22 @@
         <horizon-chart ng-repeat="m in metricGroups" hc-metrics="m" hc-edit-mode="editMetrics" ng-hide="m.hide"></horizon-chart>
       </div>
     </charts>
+  <div ng-hide="metricGroups.length">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h3 class="panel-title">Get Started Quickly</h3>
+      </div>
+      <div class="panel-body">
+        <ul>
+          <li>Enter a metric (e.g. <em>security.logging.indexer.logproc-101.total</em> ) and click the attached Add button</li>
+          <li>Enter a metric with a wild card (e.g. <em>security.logging.indexer.*.total</em> ) and click the Add button to expand into multiple graphs</li>
+          <li>Enter a metric with a $VARIABLE (e.g. <em>security.logging.indexer.$HOST.total</em> ) and click the Add button and give a value for the variable</li>
+          <li>Enter a metric with a function (e.g. <em>sumSeries(security.logging.indexer.logproc-1*.total)</em> ) and click the Add button</li>
+          <li>Enter a metric with a function and a $* instead of a * (e.g. <em>nonNegativeDerivative(general.es.logsearch-$*.http.total_opened)</em> ) and click the Add button to expand into multiple graphs</li>
+          <li>Go play around with all of the above ...</li>
+        </ul>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
