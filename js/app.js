@@ -52,6 +52,22 @@ rubicsApp.factory('cubismService', ['$q', function($q) {
 
     find: function(path) {
       console.info("Finding metric for: " + path);
+      var validateOnly = false;
+      var fnPrefix = "";
+      var fnSuffix = "";
+      var fns = path.match(/^(.*\()([^)]+)(\).*)$/);
+      if (fns && fns.length == 4) {
+        fnPrefix = fns[1];
+        fnSuffix = fns[3];
+        path = fns[2];
+        if (fns[2] && fns[2].match(/\$\*/)) {
+          //if a $* is found we expand all the metrics
+          path = path.replace(/\$\*/g, '*');
+        } else {
+          //just use find for validation
+          validateOnly = true;
+        }
+      }
       var deferred = $q.defer();
       graphite.find(path, function(error, results) {
         if (error) {
@@ -59,7 +75,7 @@ rubicsApp.factory('cubismService', ['$q', function($q) {
           deferred.reject(error);
         } else {
           console.info("Found: " + results);
-          deferred.resolve(results && results.length > 0 ? results.sort() : []);
+          deferred.resolve(results && results.length > 0 ? validateOnly ? [fnPrefix + path + fnSuffix] : results.sort().map(function (m) { return fnPrefix + m + fnSuffix; }) : []);
         }
       });
       return deferred.promise;
@@ -100,7 +116,7 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'storageService', 'cubismService'
     var m_name = $scope.metricName || m_path;
     var m_color = $scope.metricColor;
 
-    var vars = m_path.match(/(\$[A-Za-z0-9_]*)/g);
+    var vars = m_path.match(/(\$[A-Za-z0-9_]+)/g);
     if (vars) {
       // Now ignore the already defined variables
       vars = vars.filter(function(n) { return !$scope.uniqueVars[n]; });
@@ -117,6 +133,8 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'storageService', 'cubismService'
       cubismService.find(m_path).then(function (fetched) {
         if (fetched.length > 0) {
           $scope.metricGroups.push({name:m_name, find:m_path, metrics:fetched, color:m_color, hide:false});
+        } else {
+          console.info("There no results when finding metric path " + m_path);
         }
       }, function () {
         console.error("There was an error finding metric path " + m_path);
@@ -138,7 +156,7 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'storageService', 'cubismService'
     });
 
     angular.forEach($scope.metricGroups, function(m) {
-      var vars = m.find.match(/(\$[A-Za-z0-9_]*)/g);
+      var vars = m.find.match(/(\$[A-Za-z0-9_]+)/g);
       if (vars && vars.length > 0) {
         console.log("Updating vars in " + m.find);
         var m_path = m.find;
@@ -175,7 +193,8 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'storageService', 'cubismService'
 
   $scope.loadDashboard = function(name) {
     //TODO add prompt to prevent destroying the current dashboard without saving first
-    var data = storageService.load(name);
+    var data = name ? storageService.load(name) : { metricGroups: [], vars: [], metricColorIndex: 0 };
+    name = name || "My Shiny New Dashboard";
     if (data) {
       $scope.dashboardName = name;
       $scope.metricGroups = data.metricGroups;

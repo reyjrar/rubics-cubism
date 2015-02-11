@@ -47,17 +47,24 @@
               <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">{{dashboardName}} <span class="caret"></span></a>
               <ul class="dropdown-menu" role="menu">
                 <li data-ng-repeat="d in dashboards">
-                  <a ng-click="loadDashboard(d)"><span class="glyphicon glyphicon-signal"></span> {{d}}</a>
+                  <a ng-click="loadDashboard(d)"><span class="glyphicon glyphicon-equalizer"></span> {{d}}</a>
                 </li>
+                <li role="presentation" class="divider"></li>
                 <li>
-                  <form ng-submit="" class="form-inline">
-                    <div class="input-group">
-                      <input type="text" ng-model="dashboardNewName" class="form-control" placeholder="{{dashboardName}}"/>
-                      <span class="input-group-btn">
-                        <button class="btn btn-default" ng-click="saveDashboard()">Save</button>
-                      </span>
-                    </div>
-                  </form>
+                  <div class="container-fluid">
+                    <form ng-submit="" class="form-inline">
+                      <div class="input-group">
+                        <input type="text" ng-model="dashboardNewName" class="form-control" placeholder="{{dashboardName}}"/>
+                        <span class="input-group-btn">
+                          <button class="btn btn-default" ng-click="saveDashboard()">Save</button>
+                        </span>
+                      </div>
+                    </form>
+                  </div>
+                </li>
+                <li role="presentation" class="divider"></li>
+                <li>
+                  <a ng-click="loadDashboard()"><span class="glyphicon glyphicon-plus"></span> Shiny new dashboard</a>
                 </li>
               </ul>
             </li>
