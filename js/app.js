@@ -14,7 +14,7 @@ rubicsApp.factory('storageService', [function() {
       for (var i=0; i < window.localStorage.length; i++) {
         keys.push(window.localStorage.key(i));
       }
-      return keys.filter(function(n) { return n.substr(0, itemPrefix.length) === itemPrefix; }).map(function(n) { return n.substr(itemPrefix.length); });
+      return keys.filter(function(n) { return n.substr(0, itemPrefix.length) === itemPrefix; }).map(function(n) { return n.substr(itemPrefix.length); }).sort();
     },
 
     load: function(name) {
@@ -36,6 +36,68 @@ rubicsApp.factory('storageService', [function() {
 }]);  //storageService
 
 
+rubicsApp.factory('remoteStorageService', ['$q', '$http', function($q, $http) {
+  //var server = 'http://logsearch-201.lhr4.prod.booking.com:9200/';
+  var server = 'http://dc201logsearch-01.lhr4.dqs.booking.com:9200/';
+  var index = 'rubicsapp';
+  var items = null;
+
+  function _refresh() {
+    items = null;
+  }
+
+  return {
+    items: function() {
+      var deferred = $q.defer();
+      if (items) {
+        deferred.resolve(items);
+        return deferred.promise;
+      }
+      $http.post(server + index + '/dashboard/_search', angular.fromJson({"query":{"query_string":{"query":"title:*"}},"size":100})).
+        success(function(data, status, headers, config) {
+          if (data && data.hits && data.hits.hits) {
+            items = data.hits.hits.map(function(h) { return h._id; }).sort();
+            deferred.resolve(items);
+          }
+        }).
+        error(function() {
+          deferred.reject();
+        });
+      return deferred.promise;
+    },
+
+    load: function(name) {
+      var deferred = $q.defer();
+      $http.get(server + index + '/dashboard/' + name).
+        success(function(json, status, headers, config) {
+          //console.log('loaded data: ' + angular.toJson(angular.fromJson(data)._source.data));
+          var data = angular.fromJson(json);
+          if (data && data._source && data._source.data) {
+            deferred.resolve(data._source.data);
+          }
+        }).
+        error(function() {
+          deferred.reject(null);
+        });
+      return deferred.promise;
+    },
+
+    save: function(name, value) {
+      var deferred = $q.defer();
+      $http.put(server + index + '/dashboard/' + name, angular.toJson({ title: name, data: value })).
+        success(function(data, status, headers, config) {
+          deferred.resolve(name);
+          _refresh();
+        }).
+        error(function() {
+          deferred.reject();
+        });
+      return deferred.promise;
+    }
+  };
+}]);  //remoteStorageService
+
+
 rubicsApp.factory('cubismService', ['$q', function($q) {
   // TODO make the service into a provider and make the URL configurable
   var context = cubism.context()
@@ -43,7 +105,7 @@ rubicsApp.factory('cubismService', ['$q', function($q) {
     .step(60 * 1000)
     .size(1440);
 
-  var graphite = context.graphite("http://graphite.booking.com");
+  var graphite = context.graphite("http://graphite-api.booking.com");
 
   return {
     getContext: function() { return context; },
@@ -84,7 +146,7 @@ rubicsApp.factory('cubismService', ['$q', function($q) {
 }]);  //cubismService
 
 
-rubicsApp.controller("MetricsCtrl", ['$scope', 'storageService', 'cubismService', function($scope, storageService, cubismService) {
+rubicsApp.controller("MetricsCtrl", ['$scope', 'storageService', 'remoteStorageService', 'cubismService', function($scope, storageService, remoteStorageService, cubismService) {
 
   var metricColorIndex = 0;
   var metricColors = [
@@ -99,6 +161,7 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'storageService', 'cubismService'
   ];
 
   $scope.dashboards = storageService.items();
+  remoteStorageService.items().then(function(items) { $scope.remoteDashboards = items; });
   $scope.dashboardName = "My Shiny New Dashboard";
   $scope.dashboardNewName = "My Shiny New Dashboard";
 
@@ -143,10 +206,7 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'storageService', 'cubismService'
 
     //$scope.metricFind = ''; //TODO Commented for testing
     $scope.metricName = '';
-    $scope.metricColor = metricColors[metricColorIndex++];
-    if (metricColorIndex >= metricColors.length) {
-      metricColorIndex = 0;
-    }
+    $scope.metricColor = metricColors[metricColorIndex++ % metricColors.length];
   };
 
   $scope.updateVars = function() {
@@ -183,18 +243,22 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'storageService', 'cubismService'
     if (storageService.load($scope.dashboardNewName)) {
       // TODO add prompt to overwrite
     }
-    storageService.save(
-      $scope.dashboardNewName,
-      { metricGroups: $scope.metricGroups, vars: $scope.vars, metricColorIndex: metricColorIndex }
-    );
-    $scope.dashboardName = $scope.dashboardNewName;
-    $scope.dashboards = storageService.items();
+    var name = $scope.dashboardNewName;
+    var data = { metricGroups: $scope.metricGroups, vars: $scope.vars, metricColorIndex: metricColorIndex };
+    if (/^r\//.test(name)) {
+      name = name.substr(2);
+      remoteStorageService.save(name, data).then(function (name) {
+        $scope.remoteDashboards = $scope.remoteDashboards || [];
+        $scope.remoteDashboards.push(name);
+      });
+    } else {
+      storageService.save(name, data);
+      $scope.dashboards = storageService.items();
+    }
+    $scope.dashboardName = name;
   };
 
-  $scope.loadDashboard = function(name) {
-    //TODO add prompt to prevent destroying the current dashboard without saving first
-    var data = name ? storageService.load(name) : { metricGroups: [], vars: [], metricColorIndex: 0 };
-    name = name || "My Shiny New Dashboard";
+  function _loadDashboard(name, data) {
     if (data) {
       $scope.dashboardName = name;
       $scope.metricGroups = data.metricGroups;
@@ -202,8 +266,25 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'storageService', 'cubismService'
       angular.forEach($scope.vars, function(v) {
         $scope.uniqueVars[v.name] = v.value || "";
       });
-      metricColorIndex = data.metricColorIndex || 0;
-      $scope.metricColor = metricColors[metricColorIndex];
+      metricColorIndex = data.metricColorIndex;
+      $scope.metricColor = metricColors[(metricColorIndex - 1) % metricColors.length];
+    }
+  }
+  $scope.loadDashboard = function(name) {
+    //TODO add prompt to prevent destroying the current dashboard without saving first
+    if (name) {
+      //Load an existing dashboard
+      if (/^r\//.test(name)) {
+        name = name.replace(/^r\//, '');
+        remoteStorageService.load(name).then(function(data) {
+          _loadDashboard(name, data);
+        });
+      } else {
+        _loadDashboard(name, storageService.load(name));
+      }
+    } else {
+      // Create a new one
+      _loadDashboard("My Shiny New Dashboard", { metricGroups: [], vars: [], metricColorIndex: 1 });
     }
   };
 

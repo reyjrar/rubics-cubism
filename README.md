@@ -20,10 +20,14 @@ to do all the modifications in the browser.
     * Set "box-001.example.com" hit "Update" and metrics
       are refreshed on the page.
   * Done: Support for functions like sumSeries(security.logging.indexer.logproc-1\*.total), which sent to graphite as is
-  * Done: Support for functions which expand the metric with a $\* instead od a \* like nonNegativeDerivative(general.es.logsearch-$\*.http.total_opened), which will be expanded into multiple graphs
+  * Done: Support for functions which expand the metric with a $\* instead of a \* like nonNegativeDerivative(general.es.logsearch-$\*.http.total_opened), which will be expanded into multiple graphs
 * Dashboards
   * Done: Controller/View to allow saving dashboards by name
-  * Backends for Dashboard Storage?
+  * Done: Backends for Dashboard Storage?
+  * URL links to a dashboard
+  * Filter box to filter the list of dashboards
+  * Refresh the list of remote and local dashboards
+  * scroll bar in the dashboards list
 
 # Credits #
  * [Cubism](https://square.github.io/cubism/)

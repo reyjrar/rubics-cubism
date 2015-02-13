@@ -46,8 +46,13 @@
             <li class="dropdown">
               <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">{{dashboardName}} <span class="caret"></span></a>
               <ul class="dropdown-menu" role="menu">
+                <li role="presentation" class="dropdown-header">Local</li>
                 <li data-ng-repeat="d in dashboards">
                   <a ng-click="loadDashboard(d)"><span class="glyphicon glyphicon-equalizer"></span> {{d}}</a>
+                </li>
+                <li role="presentation" class="dropdown-header">Remote</li>
+                <li data-ng-repeat="d in remoteDashboards">
+                  <a ng-click="loadDashboard('r/' + d)"><span class="glyphicon glyphicon-equalizer"></span> {{d}}</a>
                 </li>
                 <li role="presentation" class="divider"></li>
                 <li>
@@ -137,6 +142,7 @@
           <li>Enter a metric with a function (e.g. <em>sumSeries(security.logging.indexer.logproc-1*.total)</em> ) and click the Add button</li>
           <li>Enter a metric with a function and a $* instead of a * (e.g. <em>nonNegativeDerivative(general.es.logsearch-$*.http.total_opened)</em> ) and click the Add button to expand into multiple graphs</li>
           <li>Go play around with all of the above ...</li>
+          <li>Prefix the name with a r/ to store the dashboard remotely</li>
         </ul>
       </div>
     </div>
