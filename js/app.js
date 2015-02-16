@@ -105,6 +105,21 @@ rubicsApp.factory('cubismService', ['$q', function($q) {
     .step(60 * 1000)
     .size(1440);
 
+  //TODO changes to the cubism global handler
+  //d3.select(window).on("keydown.rubicsapp", function() {
+  //  switch (!d3.event.metaKey && d3.event.keyCode) {
+  //    case 37: // left
+  //    case 39: // right
+  //      break;
+  //    default: return;
+  //  }
+  //  var tag = d3.event.target.tagName.toUpperCase();
+  //  if (tag === 'INPUT' || tag === 'TEXTAREA') {
+  //    return;
+  //  }
+  //  d3.event.preventDefault();
+  //});
+  //
   var graphite = context.graphite("http://graphite-api.booking.com");
 
   return {
@@ -148,17 +163,13 @@ rubicsApp.factory('cubismService', ['$q', function($q) {
 
 rubicsApp.controller("MetricsCtrl", ['$scope', 'storageService', 'remoteStorageService', 'cubismService', function($scope, storageService, remoteStorageService, cubismService) {
 
+  function d3_colors10() {
+    var colors = d3.scale.category10();
+    colors.domain([1]);
+    return colors.range();
+  }
   var metricColorIndex = 0;
-  var metricColors = [
-    '#0094ff',
-    //TODO get rid of this ugly colours and put in something nicer
-    '#ff9900',
-    '#00ff38',
-    '#cc00ff',
-    '#ff0000',
-    '#00ffc2',
-    '#fa00ff'
-  ];
+  var metricColors = d3_colors10();
 
   $scope.dashboards = storageService.items();
   remoteStorageService.items().then(function(items) { $scope.remoteDashboards = items; });
@@ -262,10 +273,10 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'storageService', 'remoteStorageS
     if (data) {
       $scope.dashboardName = name;
       $scope.metricGroups = data.metricGroups;
-      $scope.vars = data.vars;
-      angular.forEach($scope.vars, function(v) {
+      angular.forEach(data.vars, function(v) {
         $scope.uniqueVars[v.name] = v.value || "";
       });
+      $scope.vars = data.vars;
       metricColorIndex = data.metricColorIndex;
       $scope.metricColor = metricColors[(metricColorIndex - 1) % metricColors.length];
     }
