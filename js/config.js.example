@@ -1,0 +1,7 @@
+angular.module('rubicsApp.config', [])
+    .constant('RUBICS', {
+        'GRAPHITE_URL'        :  "http://graphite.example.com/",
+        'ELASTICSEARCH_URL'   :  "http://search.example.com:9200/",
+        'DEFAULT_METRIC'      :  "diamond.$DC.$build.*.loadavg.01",
+        'DEFAULT_METRIC_NAME' :  "Load Average"
+    });

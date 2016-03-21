@@ -1,7 +1,7 @@
 var rubicsApp = angular.module("rubicsApp", [
-  'colorpicker.module'
+  'colorpicker.module',
+  'rubicsApp.config'
 ]);
-
 
 rubicsApp.factory('storageService', [function() {
   var itemPrefix = 'rubicsApp.dashboard.';
@@ -36,9 +36,7 @@ rubicsApp.factory('storageService', [function() {
 }]);  //storageService
 
 
-rubicsApp.factory('remoteStorageService', ['$q', '$http', function($q, $http) {
-  //var server = 'http://logsearch-201.lhr4.prod.booking.com:9200/';
-  var server = 'http://dc201logsearch-01.lhr4.dqs.booking.com:9200/';
+rubicsApp.factory('remoteStorageService', ['$q', '$http', 'RUBICS', function($q, $http, RUBICS) {
   var index = 'rubicsapp';
   var items = null;
 
@@ -53,7 +51,7 @@ rubicsApp.factory('remoteStorageService', ['$q', '$http', function($q, $http) {
         deferred.resolve(items);
         return deferred.promise;
       }
-      $http.post(server + index + '/dashboard/_search', angular.fromJson({"query":{"query_string":{"query":"title:*"}},"size":100})).
+      $http.post(RUBICS.ELASTICSEARCH_URL + index + '/dashboard/_search', angular.fromJson({"query":{"query_string":{"query":"title:*"}},"size":100})).
         success(function(data, status, headers, config) {
           if (data && data.hits && data.hits.hits) {
             items = data.hits.hits.map(function(h) { return h._id; }).sort();
@@ -68,7 +66,7 @@ rubicsApp.factory('remoteStorageService', ['$q', '$http', function($q, $http) {
 
     load: function(name) {
       var deferred = $q.defer();
-      $http.get(server + index + '/dashboard/' + name).
+      $http.get(RUBICS.ELASTICSEARCH_URL + index + '/dashboard/' + name).
         success(function(json, status, headers, config) {
           //console.log('loaded data: ' + angular.toJson(angular.fromJson(data)._source.data));
           var data = angular.fromJson(json);
@@ -84,7 +82,7 @@ rubicsApp.factory('remoteStorageService', ['$q', '$http', function($q, $http) {
 
     save: function(name, value) {
       var deferred = $q.defer();
-      $http.put(server + index + '/dashboard/' + name, angular.toJson({ title: name, data: value })).
+      $http.put(RUBICS.ELASTICSEARCH_URL + index + '/dashboard/' + name, angular.toJson({ title: name, data: value })).
         success(function(data, status, headers, config) {
           deferred.resolve(name);
           _refresh();
@@ -98,7 +96,7 @@ rubicsApp.factory('remoteStorageService', ['$q', '$http', function($q, $http) {
 }]);  //remoteStorageService
 
 
-rubicsApp.factory('cubismService', ['$q', function($q) {
+rubicsApp.factory('cubismService', ['$q', 'RUBICS', function($q, RUBICS) {
   // TODO make the service into a provider and make the URL configurable
   var context = cubism.context()
     .serverDelay(60 * 1000)
@@ -119,8 +117,8 @@ rubicsApp.factory('cubismService', ['$q', function($q) {
   //  }
   //  d3.event.preventDefault();
   //});
-  //
-  var graphite = context.graphite("http://graphite-api.booking.com");
+
+  var graphite = context.graphite(RUBICS.GRAPHITE_URL);
 
   return {
     getContext: function() { return context; },
@@ -161,7 +159,7 @@ rubicsApp.factory('cubismService', ['$q', function($q) {
 }]);  //cubismService
 
 
-rubicsApp.controller("MetricsCtrl", ['$scope', 'storageService', 'remoteStorageService', 'cubismService', function($scope, storageService, remoteStorageService, cubismService) {
+rubicsApp.controller("MetricsCtrl", ['$scope', 'storageService', 'remoteStorageService', 'cubismService', 'RUBICS', function($scope, storageService, remoteStorageService, cubismService, RUBICS) {
 
   function d3_colors10() {
     var colors = d3.scale.category10();
@@ -177,8 +175,8 @@ rubicsApp.controller("MetricsCtrl", ['$scope', 'storageService', 'remoteStorageS
   $scope.dashboardNewName = "My Shiny New Dashboard";
 
   $scope.editMetrics = false;
-  $scope.metricFind = 'security.logging.indexer.*.total'; //TODO this is a default for testing
-  $scope.metricName = '';
+  $scope.metricFind = RUBICS.DEFAULT_METRIC;
+  $scope.metricName = RUBICS.DEFAULT_METRIC_NAME;
   $scope.metricColor = metricColors[metricColorIndex++];
 
   $scope.metricGroups = [];
